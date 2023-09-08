@@ -16,7 +16,6 @@ public class CloudWatchController {
 
     private final CloudWatchService cloudWatchService;
 
-
     @GetMapping("/getMetricData")
     public MetricDataResponse getMetricData(
             @RequestParam Instant startTime,
