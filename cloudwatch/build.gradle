@@ -22,15 +22,21 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	implementation 'com.h2database:h2'
 
+	// amazon cloudwatch
 	implementation platform('software.amazon.awssdk:bom:2.20.25')
 	implementation 'software.amazon.awssdk:cloudwatch'
 	implementation 'software.amazon.awssdk:cloudwatchevents'
 	implementation 'software.amazon.awssdk:cloudwatchlogs'
 
+	// lombok
 	compileOnly	('org.projectlombok:lombok:1.18.8')
 	annotationProcessor ('org.projectlombok:lombok:1.18.8')
 	testAnnotationProcessor ('org.projectlombok:lombok:1.18.8')
 	testCompileOnly ('org.projectlombok:lombok:1.18.8')
+
+	// swagger
+	implementation ('io.springfox:springfox-swagger2:2.9.2')
+	implementation ('io.springfox:springfox-swagger-ui:2.9.2')
 }
 
 tasks.named('test') {

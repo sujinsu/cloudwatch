@@ -16,15 +16,23 @@ import software.amazon.awssdk.services.cloudwatch.model.GetMetricStatisticsReque
 import software.amazon.awssdk.services.cloudwatch.model.GetMetricStatisticsResponse;
 import software.amazon.awssdk.services.cloudwatch.model.Metric;
 import software.amazon.awssdk.services.cloudwatch.model.MetricDataQuery;
+import software.amazon.awssdk.services.cloudwatch.model.MetricDataResult;
 import software.amazon.awssdk.services.cloudwatch.model.MetricStat;
 
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Collections;
+import java.util.List;
+
+import static com.fasterxml.jackson.datatype.jsr310.deser.JSR310StringParsableDeserializer.ZONE_ID;
 
 @Service
 public class CloudWatchService {
 
     private final CloudWatchClient cloudWatchClient;
+
+    /* CloudWatch 수집 쿼리 실행 시 탐색 시간 범위 */
+    private final ZoneId ZONE_ID = ZoneId.of("Asia/Seoul");
 
     public CloudWatchService() {
         /* Provider 생성을 위한 Credentials */
@@ -60,6 +68,16 @@ public class CloudWatchService {
 
         GetMetricDataResponse response = cloudWatchClient.getMetricData(request);
 
+        List<Instant> timestamps = null;
+        List<Double> values = null;
+        for(MetricDataResult result : response.metricDataResults()) {
+            timestamps = result.timestamps();
+            values = result.values();
+            System.out.println(String.format("id : %s", result.id()));
+            for (int i=values.size()-1; i>=0; i--) {
+                System.out.println(String.format("timestamp : %s, value : %s", timestamps.get(i).atZone(ZONE_ID), values.get(i)));
+            }
+        }
         return new MetricDataResponse(response.metricDataResults());
     }
 
