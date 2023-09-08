@@ -25,6 +25,7 @@ dependencies {
 	// amazon cloudwatch
 	implementation platform('software.amazon.awssdk:bom:2.20.25')
 	implementation 'software.amazon.awssdk:cloudwatch'
+	implementation 'software.amazon.awssdk:ec2'
 	implementation 'software.amazon.awssdk:cloudwatchevents'
 	implementation 'software.amazon.awssdk:cloudwatchlogs'
 

@@ -1,9 +1,16 @@
 package com.example.cloudwatch.service;
 
-import com.example.cloudwatch.domain.MetricDataResponse;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
+import com.example.cloudwatch.domain.MetricDataResponse;
 import com.example.cloudwatch.type.MetricStatistic;
+
 import org.springframework.stereotype.Service;
+
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -19,18 +26,19 @@ import software.amazon.awssdk.services.cloudwatch.model.MetricDataQuery;
 import software.amazon.awssdk.services.cloudwatch.model.MetricDataResult;
 import software.amazon.awssdk.services.cloudwatch.model.MetricStat;
 
-import java.time.Instant;
-import java.time.ZoneId;
-import java.util.Collections;
-import java.util.List;
-
-import static com.fasterxml.jackson.datatype.jsr310.deser.JSR310StringParsableDeserializer.ZONE_ID;
+import software.amazon.awssdk.services.ec2.Ec2Client;
+import software.amazon.awssdk.services.ec2.model.DescribeInstancesRequest;
+import software.amazon.awssdk.services.ec2.model.DescribeInstancesResponse;
+import software.amazon.awssdk.services.ec2.model.Instance;
+import software.amazon.awssdk.services.ec2.model.Reservation;
+import software.amazon.awssdk.services.ec2.model.Ec2Exception;
+import software.amazon.awssdk.services.ec2.model.Tag;
 
 @Service
 public class CloudWatchService {
 
     private final CloudWatchClient cloudWatchClient;
-
+    private final Ec2Client ec2Client;
     /* CloudWatch 수집 쿼리 실행 시 탐색 시간 범위 */
     private final ZoneId ZONE_ID = ZoneId.of("Asia/Seoul");
 
@@ -41,6 +49,7 @@ public class CloudWatchService {
         AwsBasicCredentials awsBasicCredentials = AwsBasicCredentials.create(accessKey, secretKey);
         AwsCredentialsProvider credentialsProvider = StaticCredentialsProvider.create(awsBasicCredentials);
         this.cloudWatchClient = CloudWatchClient.builder().region(Region.US_WEST_2).credentialsProvider(credentialsProvider).build();
+        this.ec2Client = Ec2Client.builder().region(Region.US_WEST_2).credentialsProvider(credentialsProvider).build();
 //        this.cloudWatchClient = CloudWatchClient.create();
     }
 
@@ -94,5 +103,30 @@ public class CloudWatchService {
         GetMetricStatisticsResponse response = cloudWatchClient.getMetricStatistics(request);
 
         return response.datapoints().isEmpty() ? null : response.datapoints().get(0);
+    }
+
+    public List<Instance> describeEC2Instances() {
+        List<Instance> instances = new ArrayList<>();
+        String nextToken = null;
+        try {
+            do {
+                DescribeInstancesRequest request = DescribeInstancesRequest.builder().maxResults(6).nextToken(nextToken).build();
+                DescribeInstancesResponse response = ec2Client.describeInstances(request);
+                for (Reservation reservation : response.reservations()) {
+                    for (Instance instance : reservation.instances()) {
+                        instances.add(instance);
+                        instance.instanceId();
+                        List<Tag> tags = instance.tags();
+//                        tags.get(0).key();
+//                        tags.get(0).value();
+                    }
+                }
+                nextToken = response.nextToken();
+            } while (nextToken != null);
+            return instances;
+        } catch (Ec2Exception e) {
+            System.err.println(e.awsErrorDetails().errorCode());
+            throw new RuntimeException("Failed to describe EC2 instances", e);
+        }
     }
 }
