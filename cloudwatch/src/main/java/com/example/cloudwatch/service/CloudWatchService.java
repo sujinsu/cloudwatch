@@ -34,23 +34,45 @@ import software.amazon.awssdk.services.ec2.model.Reservation;
 import software.amazon.awssdk.services.ec2.model.Ec2Exception;
 import software.amazon.awssdk.services.ec2.model.Tag;
 
+import software.amazon.awssdk.services.rds.RdsClient;
+import software.amazon.awssdk.services.rds.model.DescribeDbInstancesResponse;
+import software.amazon.awssdk.services.rds.model.DBInstance;
+import software.amazon.awssdk.services.rds.model.RdsException;
+
+import software.amazon.awssdk.services.route53.Route53Client;
+import software.amazon.awssdk.services.route53.model.HealthCheck;
+import software.amazon.awssdk.services.route53.model.Route53Exception;
+import software.amazon.awssdk.services.route53.model.ListHealthChecksResponse;
+
+import javax.transaction.Transactional;
+
 @Service
+@Transactional
 public class CloudWatchService {
 
     private final CloudWatchClient cloudWatchClient;
     private final Ec2Client ec2Client;
+    private final RdsClient rdsClient;
+
+    private final Route53Client route53Client;
+
     /* CloudWatch 수집 쿼리 실행 시 탐색 시간 범위 */
     private final ZoneId ZONE_ID = ZoneId.of("Asia/Seoul");
 
     public CloudWatchService() {
         /* Provider 생성을 위한 Credentials */
+        // TODO accessKey secretKey 분리 및 Region 설정
         String accessKey = "xxxxxxxxxx";
         String secretKey = "xxxxxxxxxxxxxxxxxxxx";
         AwsBasicCredentials awsBasicCredentials = AwsBasicCredentials.create(accessKey, secretKey);
         AwsCredentialsProvider credentialsProvider = StaticCredentialsProvider.create(awsBasicCredentials);
         this.cloudWatchClient = CloudWatchClient.builder().region(Region.US_WEST_2).credentialsProvider(credentialsProvider).build();
         this.ec2Client = Ec2Client.builder().region(Region.US_WEST_2).credentialsProvider(credentialsProvider).build();
-//        this.cloudWatchClient = CloudWatchClient.create();
+        this.rdsClient = RdsClient.builder().region(Region.US_WEST_2).credentialsProvider(credentialsProvider).build();
+        this.route53Client = Route53Client.builder()
+                .region(Region.US_WEST_2)
+                .credentialsProvider(credentialsProvider)
+                .build();
     }
 
     public MetricDataResponse getMetricData(Instant startTime, Instant endTime) {
@@ -101,7 +123,13 @@ public class CloudWatchService {
                 .build();
 
         GetMetricStatisticsResponse response = cloudWatchClient.getMetricStatistics(request);
-
+        if (!response.datapoints().isEmpty()) {
+            for (Datapoint datapoint : response.datapoints()) {
+                System.out.println("Timestamp: " + datapoint.timestamp().atZone(ZONE_ID));
+                System.out.println("Average: " + datapoint.average());
+                System.out.println("Unit: " + datapoint.unit());
+            }
+        }
         return response.datapoints().isEmpty() ? null : response.datapoints().get(0);
     }
 
@@ -116,9 +144,14 @@ public class CloudWatchService {
                     for (Instance instance : reservation.instances()) {
                         instances.add(instance);
                         instance.instanceId();
-                        List<Tag> tags = instance.tags();
-//                        tags.get(0).key();
-//                        tags.get(0).value();
+                        Tag tagName = instance.tags().stream()
+                                .filter(o -> o.key().equals("Name"))
+                                .findFirst()
+                                .orElse(Tag.builder().key("Name").value("name not found").build());
+
+                        System.out.println("Found instance with ID: " + instance.instanceId()
+                                + ", NAME: " + tagName.value()
+                                + ", TYPE: " + instance.instanceType());
                     }
                 }
                 nextToken = response.nextToken();
@@ -127,6 +160,36 @@ public class CloudWatchService {
         } catch (Ec2Exception e) {
             System.err.println(e.awsErrorDetails().errorCode());
             throw new RuntimeException("Failed to describe EC2 instances", e);
+        }
+    }
+
+    public void describeRdsInstances() {
+        try {
+            DescribeDbInstancesResponse response = rdsClient.describeDBInstances();
+            List<DBInstance> instanceList = response.dbInstances();
+            for (DBInstance instance: instanceList) {
+                System.out.println("The Engine is " + instance.engine());
+                System.out.println("Connection endpoint is " + instance.endpoint().address());
+                System.out.println("Connection endpoint is " + instance.dbName());
+            }
+        } catch (RdsException e) {
+            System.out.println(e.getLocalizedMessage());
+            System.exit(1);
+        }
+    }
+
+    public void listRoute53HealthChecks() {
+        try {
+            ListHealthChecksResponse checksResponse = route53Client.listHealthChecks();
+            List<HealthCheck> checklist = checksResponse.healthChecks();
+            for (HealthCheck check: checklist) {
+                System.out.println("The health check id is: "+check.id());
+                System.out.println("The health threshold is: "+check.healthCheckConfig().healthThreshold());
+                System.out.println("The health threshold is: "+check.linkedService().servicePrincipal());
+                System.out.println("The type is: "+check.healthCheckConfig().typeAsString());
+            }
+        } catch (Route53Exception e) {
+            System.err.println(e.getMessage());
         }
     }
 }
