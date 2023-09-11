@@ -3,7 +3,7 @@ package com.example.cloudwatch.type;
 import software.amazon.awssdk.services.cloudwatch.model.Statistic;
 
 public enum MetricStatistic {
-    AVERAGE("Average"),
+    AVERAGE("AVERAGE"),
     SUM("Sum"),
     MINIMUM("Minimum"),
     MAXIMUM("Maximum"),
