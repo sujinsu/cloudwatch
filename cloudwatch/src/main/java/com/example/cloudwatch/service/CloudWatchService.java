@@ -5,10 +5,12 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.example.cloudwatch.domain.MetricDataResponse;
 import com.example.cloudwatch.type.MetricStatistic;
 
+import com.example.cloudwatch.value.DatapointVo;
 import org.springframework.stereotype.Service;
 
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -17,6 +19,7 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.cloudwatch.CloudWatchClient;
 import software.amazon.awssdk.services.cloudwatch.model.Datapoint;
+import software.amazon.awssdk.services.cloudwatch.model.Dimension;
 import software.amazon.awssdk.services.cloudwatch.model.GetMetricDataRequest;
 import software.amazon.awssdk.services.cloudwatch.model.GetMetricDataResponse;
 import software.amazon.awssdk.services.cloudwatch.model.GetMetricStatisticsRequest;
@@ -52,7 +55,7 @@ public class CloudWatchService {
 
     private final CloudWatchClient cloudWatchClient;
     private final Ec2Client ec2Client;
-    private final RdsClient rdsClient;
+//    private final RdsClient rdsClient;
 
     private final Route53Client route53Client;
 
@@ -62,15 +65,15 @@ public class CloudWatchService {
     public CloudWatchService() {
         /* Provider 생성을 위한 Credentials */
         // TODO accessKey secretKey 분리 및 Region 설정
-        String accessKey = "xxxxxxxxxx";
-        String secretKey = "xxxxxxxxxxxxxxxxxxxx";
+        String accessKey = "xxxx";
+        String secretKey = "xxxxxx";
         AwsBasicCredentials awsBasicCredentials = AwsBasicCredentials.create(accessKey, secretKey);
         AwsCredentialsProvider credentialsProvider = StaticCredentialsProvider.create(awsBasicCredentials);
-        this.cloudWatchClient = CloudWatchClient.builder().region(Region.US_WEST_2).credentialsProvider(credentialsProvider).build();
-        this.ec2Client = Ec2Client.builder().region(Region.US_WEST_2).credentialsProvider(credentialsProvider).build();
-        this.rdsClient = RdsClient.builder().region(Region.US_WEST_2).credentialsProvider(credentialsProvider).build();
+        this.cloudWatchClient = CloudWatchClient.builder().region(Region.AP_NORTHEAST_2).credentialsProvider(credentialsProvider).build();
+        this.ec2Client = Ec2Client.builder().region(Region.AP_NORTHEAST_2).credentialsProvider(credentialsProvider).build();
+//        this.rdsClient = RdsClient.builder().region(Region.AP_NORTHEAST_2).credentialsProvider(credentialsProvider).build();
         this.route53Client = Route53Client.builder()
-                .region(Region.US_WEST_2)
+                .region(Region.AP_NORTHEAST_2)
                 .credentialsProvider(credentialsProvider)
                 .build();
     }
@@ -112,25 +115,56 @@ public class CloudWatchService {
         return new MetricDataResponse(response.metricDataResults());
     }
 
-    public Datapoint getMetricStatistics(Instant startTime, Instant endTime) {
-        GetMetricStatisticsRequest request = GetMetricStatisticsRequest.builder()
-                .namespace("AWS/EC2")
-                .metricName("CPUUtilization")
-                .startTime(startTime)
-                .endTime(endTime)
-                .period(300)
-                .statistics(MetricStatistic.AVERAGE.getValue())
-                .build();
+    public List<DatapointVo> getMetricStatistics(Instant startTime, Instant endTime) {
+        List<Instance> instances = describeEC2Instances();
+        List<DatapointVo> result =  new ArrayList<>();
 
-        GetMetricStatisticsResponse response = cloudWatchClient.getMetricStatistics(request);
-        if (!response.datapoints().isEmpty()) {
-            for (Datapoint datapoint : response.datapoints()) {
-                System.out.println("Timestamp: " + datapoint.timestamp().atZone(ZONE_ID));
-                System.out.println("Average: " + datapoint.average());
-                System.out.println("Unit: " + datapoint.unit());
+        for (Instance instance : instances) {
+            Tag tagName = instance.tags().stream()
+                    .filter(o -> o.key().equals("Name"))
+                    .findFirst()
+                    .orElse(Tag.builder().key("Name").value("name not found").build());
+
+            Dimension dimension = Dimension.builder()
+                    .name("InstanceId")
+                    .value(instance.instanceId())
+                    .build();
+
+            GetMetricStatisticsRequest request = GetMetricStatisticsRequest.builder()
+                    .namespace("AWS/EC2")
+                    .metricName("CPUUtilization")
+                    .startTime(startTime)
+                    .endTime(endTime)
+                    .period(300)
+                    .dimensions(dimension)
+                    .statistics(MetricStatistic.AVERAGE.getValue())
+                    .build();
+
+            GetMetricStatisticsResponse response = cloudWatchClient.getMetricStatistics(request);
+
+            if (!response.datapoints().isEmpty()) {
+                for (Datapoint datapoint : response.datapoints()) {
+                    System.out.println("datapoint.toString() = " + datapoint.toString());
+                    DatapointVo vo = new DatapointVo();
+
+                    vo.setInstanceId(instance.instanceId()); // Setting the instance ID here.
+                    vo.setTimestamp(datapoint.timestamp().toString());
+                    vo.setAverage(datapoint.average());
+                    vo.setTagName(tagName.value());
+                    vo.setInstanceType(String.valueOf(instance.instanceType()));
+                    if (datapoint.maximum() != null) {
+                        vo.setMaximum(datapoint.maximum());
+                    }
+                    if (datapoint.minimum() != null) {
+                        vo.setMinimum(datapoint.minimum());
+                    }
+
+                    vo.setUnit(datapoint.unit().toString());
+                    result.add(vo);
+                }
             }
         }
-        return response.datapoints().isEmpty() ? null : response.datapoints().get(0);
+        return result;
     }
 
     public List<Instance> describeEC2Instances() {
@@ -163,20 +197,20 @@ public class CloudWatchService {
         }
     }
 
-    public void describeRdsInstances() {
-        try {
-            DescribeDbInstancesResponse response = rdsClient.describeDBInstances();
-            List<DBInstance> instanceList = response.dbInstances();
-            for (DBInstance instance: instanceList) {
-                System.out.println("The Engine is " + instance.engine());
-                System.out.println("Connection endpoint is " + instance.endpoint().address());
-                System.out.println("Connection endpoint is " + instance.dbName());
-            }
-        } catch (RdsException e) {
-            System.out.println(e.getLocalizedMessage());
-            System.exit(1);
-        }
-    }
+//    public void describeRdsInstances() {
+//        try {
+//            DescribeDbInstancesResponse response = rdsClient.describeDBInstances();
+//            List<DBInstance> instanceList = response.dbInstances();
+//            for (DBInstance instance: instanceList) {
+//                System.out.println("The Engine is " + instance.engine());
+//                System.out.println("Connection endpoint is " + instance.endpoint().address());
+//                System.out.println("Connection endpoint is " + instance.dbName());
+//            }
+//        } catch (RdsException e) {
+//            System.out.println(e.getLocalizedMessage());
+//            System.exit(1);
+//        }
+//    }
 
     public void listRoute53HealthChecks() {
         try {
