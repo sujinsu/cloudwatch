@@ -2,6 +2,9 @@ package com.example.cloudwatch.type;
 
 import software.amazon.awssdk.services.cloudwatch.model.Statistic;
 
+import java.util.Collection;
+import java.util.Collections;
+
 public enum MetricStatistic {
     AVERAGE("AVERAGE"),
     SUM("SUM"),
@@ -15,8 +18,8 @@ public enum MetricStatistic {
         this.value = value;
     }
 
-    public Statistic getValue() {
-        return Statistic.valueOf(value);
+    public Collection<Statistic> getValue() {
+        return Collections.singleton(Statistic.valueOf(value));
     }
 
     public static MetricStatistic fromValue(String value) {
