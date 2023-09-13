@@ -18,9 +18,9 @@ public class DatapointVo {
 
     private String metricName;
     private String timestamp;
-    private double average;
-    private double maximum;
-    private double minimum;
+    private String  statisticsType;
+
+    private double statisticsValue;
     private String unit;
 
 }

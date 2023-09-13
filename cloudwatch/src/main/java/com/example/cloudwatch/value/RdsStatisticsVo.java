@@ -3,6 +3,7 @@ package com.example.cloudwatch.value;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import software.amazon.awssdk.services.rds.model.Endpoint;
 
 @Getter
 @Setter
@@ -11,11 +12,15 @@ public class RdsStatisticsVo {
 
     private String engine;
 
-    private Long endpoint;
+    private Endpoint endpoint;
 
     private String dbName;
 
-    private double average;
+    private String namespace;
 
+    private String metricName;
+    private String  statisticsType;
+
+    private double statisticsValue;
 
 }

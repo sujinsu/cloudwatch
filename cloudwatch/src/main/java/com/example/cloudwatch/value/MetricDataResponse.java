@@ -1,4 +1,4 @@
-package com.example.cloudwatch.domain;
+package com.example.cloudwatch.value;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
