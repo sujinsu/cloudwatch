@@ -4,9 +4,9 @@ import software.amazon.awssdk.services.cloudwatch.model.Statistic;
 
 public enum MetricStatistic {
     AVERAGE("AVERAGE"),
-    SUM("Sum"),
-    MINIMUM("Minimum"),
-    MAXIMUM("Maximum"),
+    SUM("SUM"),
+    MINIMUM("MINIMUM"),
+    MAXIMUM("MAXIMUM"),
     SAMPLE_COUNT("SampleCount");
 
     private final String value;

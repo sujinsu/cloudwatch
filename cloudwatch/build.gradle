@@ -23,11 +23,14 @@ dependencies {
 	implementation 'com.h2database:h2'
 
 	// amazon cloudwatch
-	implementation platform('software.amazon.awssdk:bom:2.20.25')
+//	implementation platform('software.amazon.awssdk:bom:2.20.25')
+	implementation platform('software.amazon.awssdk:bom:2.20.144')
+
 	implementation 'software.amazon.awssdk:cloudwatch'
 	implementation 'software.amazon.awssdk:ec2'
 	implementation 'software.amazon.awssdk:rds'
 	implementation 'software.amazon.awssdk:route53'
+	implementation 'software.amazon.awssdk:route53domains'
 	implementation 'software.amazon.awssdk:cloudwatchevents'
 	implementation 'software.amazon.awssdk:cloudwatchlogs'
 

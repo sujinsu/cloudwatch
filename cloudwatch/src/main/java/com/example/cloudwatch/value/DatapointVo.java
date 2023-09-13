@@ -13,6 +13,10 @@ public class DatapointVo {
     private String instanceId;
     private String instanceType;
     private String tagName;
+
+    private String namespace;
+
+    private String metricName;
     private String timestamp;
     private double average;
     private double maximum;
