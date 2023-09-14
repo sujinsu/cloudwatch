@@ -5,12 +5,15 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 
 import com.example.cloudwatch.value.MetricDataResponse;
 import com.example.cloudwatch.type.MetricStatistic;
 
-import com.example.cloudwatch.value.DatapointVo;
+import com.example.cloudwatch.value.EC2StatisticsVo;
+import com.example.cloudwatch.value.MetricVo;
 import com.example.cloudwatch.value.RdsStatisticsVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -24,6 +27,8 @@ import software.amazon.awssdk.services.cloudwatch.model.GetMetricDataRequest;
 import software.amazon.awssdk.services.cloudwatch.model.GetMetricDataResponse;
 import software.amazon.awssdk.services.cloudwatch.model.GetMetricStatisticsRequest;
 import software.amazon.awssdk.services.cloudwatch.model.GetMetricStatisticsResponse;
+import software.amazon.awssdk.services.cloudwatch.model.ListMetricsRequest;
+import software.amazon.awssdk.services.cloudwatch.model.ListMetricsResponse;
 import software.amazon.awssdk.services.cloudwatch.model.Metric;
 import software.amazon.awssdk.services.cloudwatch.model.MetricDataQuery;
 import software.amazon.awssdk.services.cloudwatch.model.MetricDataResult;
@@ -34,6 +39,8 @@ import software.amazon.awssdk.services.cloudwatch.model.Statistic;
 import software.amazon.awssdk.services.ec2.model.Instance;
 import software.amazon.awssdk.services.ec2.model.Tag;
 import software.amazon.awssdk.services.rds.model.DBInstance;
+
+
 
 
 @Service
@@ -94,15 +101,33 @@ public class CloudWatchService {
         return new MetricDataResponse(response.metricDataResults());
     }
 
-    public List<DatapointVo> getEC2MetricStatistics(Instant startTime, Instant endTime) {
-        List<Instance> instances = ec2Service.describeEC2Instances();
-        List<DatapointVo> result =  new ArrayList<>();
+    public List<EC2StatisticsVo> getEC2MetricStatistics(Instant startTime, Instant endTime, String namespace, String metricName) {
 
-        String namespace = "AWS/EC2";
-        String metricName = "CPUUtilization";
-        Collection<Statistic> statisticType = MetricStatistic.MAXIMUM.getValue();
+
+        List<Instance> instances = ec2Service.describeEC2Instances();
+        List<EC2StatisticsVo> result =  new ArrayList<>();
+
+//        String namespace = "AWS/EC2";
+//        String metricName = "CPUUtilization"; // "StatusCheckFailed_System"
+        Collection<Statistic> statisticType;
+        if(Objects.equals(metricName, "StatusCheckFailed_System")){
+            statisticType = MetricStatistic.SAMPLE_COUNT.getValue();
+        }else{
+            statisticType = MetricStatistic.MAXIMUM.getValue();
+        }
+
+
 
         for (Instance instance : instances) {
+//            instance.blockDeviceMappings().stream().forEach(
+//
+//                blockDevice ->
+//                    ec2Service.describeEbsVolumes(blockDevice.ebs().volumeId())
+////                    System.out.println("blockDevice.toString() = " + )
+//            );
+
+
+            
             Tag tagName = instance.tags().stream()
                     .filter(o -> o.key().equals("Name"))
                     .findFirst()
@@ -112,6 +137,8 @@ public class CloudWatchService {
                     .name("InstanceId")
                     .value(instance.instanceId())
                     .build();
+
+
 
             GetMetricStatisticsRequest request = GetMetricStatisticsRequest.builder()
                     .namespace(namespace)
@@ -127,8 +154,8 @@ public class CloudWatchService {
 
             if (!response.datapoints().isEmpty()) {
                 for (Datapoint datapoint : response.datapoints()) {
-                    DatapointVo vo = new DatapointVo();
-
+                    EC2StatisticsVo vo = new EC2StatisticsVo();
+//                    System.out.println("datapoint sampleCount= " + datapoint.sampleCount());
                     vo.setInstanceId(instance.instanceId()); // Setting the instance ID here.
                     vo.setTimestamp(datapoint.timestamp().toString());
                     vo.setTagName(tagName.value());
@@ -137,20 +164,25 @@ public class CloudWatchService {
                     vo.setInstanceType(String.valueOf(instance.instanceType()));
                     vo.setUnit(datapoint.unit().toString());
                     vo.setStatisticsType(statisticType.toString());
-                    vo.setStatisticsValue(datapoint.maximum());
+                    if(statisticType.equals(MetricStatistic.SAMPLE_COUNT.getValue())){
+                        vo.setStatisticsValue(datapoint.sampleCount());
+                    }else{
+                        vo.setStatisticsValue(datapoint.maximum());
+                    }
+
                     result.add(vo);
                 }
             }
         }
         return result;
     }
-    public List<RdsStatisticsVo> getRdsMetricStatistics(Instant startTime, Instant endTime) {
+    public List<RdsStatisticsVo> getRdsMetricStatistics(Instant startTime, Instant endTime, String namespace, String metricName) {
         List<DBInstance> instances = rdsService.describeRdsInstances();
         List<RdsStatisticsVo> result = new ArrayList<>();
 
-        String namespace = "AWS/RDS";
-        String metricName = "CPUUtilization";
-        Collection<Statistic> statisticType = MetricStatistic.MAXIMUM.getValue();
+//        String namespace = "AWS/RDS";
+//        String metricName = "CPUUtilization";
+        Collection<Statistic> statisticType = MetricStatistic.AVERAGE.getValue();
 
         for (DBInstance instance : instances) {
 
@@ -191,7 +223,33 @@ public class CloudWatchService {
 
 
 
+    public MetricVo getMetricList(String namespace) {
+        MetricVo result = new MetricVo();
+        result.setNamespace(namespace);
 
+        ListMetricsRequest request = ListMetricsRequest.builder()
+                .namespace(namespace)
+                .build();
 
+        String nextToken = null;
+        List<String> metrics = new ArrayList<>();
+        do {
+            ListMetricsResponse response = cloudWatchClient.listMetrics(request);
 
+            for (Metric metric : response.metrics()) {
+                metrics.add(metric.metricName());
+//                System.out.println("metric.toString() = " + metric.toString());
+//                System.out.printf(
+//                        "Retrieved metric %s with dimensions %s%n",
+//                        metric.metricName(), metric.dimensions());
+            }
+
+            nextToken = response.nextToken();
+            request = request.toBuilder().nextToken(nextToken).build();
+
+        } while (nextToken != null);
+
+        result.setMetrics(new ArrayList<>(new LinkedHashSet<>(metrics)));
+        return result;
+    }
 }
