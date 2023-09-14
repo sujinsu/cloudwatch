@@ -10,7 +10,7 @@ public enum MetricStatistic {
     SUM("SUM"),
     MINIMUM("MINIMUM"),
     MAXIMUM("MAXIMUM"),
-    SAMPLE_COUNT("SampleCount");
+    SAMPLE_COUNT("SAMPLE_COUNT");
 
     private final String value;
 

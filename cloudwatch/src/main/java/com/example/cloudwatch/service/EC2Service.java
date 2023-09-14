@@ -6,10 +6,13 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.ec2.Ec2Client;
 import software.amazon.awssdk.services.ec2.model.DescribeInstancesRequest;
 import software.amazon.awssdk.services.ec2.model.DescribeInstancesResponse;
+import software.amazon.awssdk.services.ec2.model.DescribeVolumesRequest;
+import software.amazon.awssdk.services.ec2.model.DescribeVolumesResponse;
 import software.amazon.awssdk.services.ec2.model.Ec2Exception;
 import software.amazon.awssdk.services.ec2.model.Instance;
 import software.amazon.awssdk.services.ec2.model.Reservation;
 import software.amazon.awssdk.services.ec2.model.Tag;
+import software.amazon.awssdk.services.ec2.model.Volume;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,15 +39,15 @@ public class EC2Service {
                 for (Reservation reservation : response.reservations()) {
                     for (Instance instance : reservation.instances()) {
                         instances.add(instance);
-                        instance.instanceId();
-                        Tag tagName = instance.tags().stream()
-                                .filter(o -> o.key().equals("Name"))
-                                .findFirst()
-                                .orElse(Tag.builder().key("Name").value("name not found").build());
-
-                        System.out.println("Found instance with ID: " + instance.instanceId()
-                                + ", NAME: " + tagName.value()
-                                + ", TYPE: " + instance.instanceType());
+//                        instance.instanceId();
+//                        Tag tagName = instance.tags().stream()
+//                            .filter(o -> o.key().equals("Name"))
+//                            .findFirst()
+//                            .orElse(Tag.builder().key("Name").value("name not found").build());
+//
+//                        System.out.println("Found instance with ID: " + instance.instanceId()
+//                            + ", NAME: " + tagName.value()
+//                            + ", TYPE: " + instance.instanceType());
                     }
                 }
                 nextToken = response.nextToken();
@@ -53,6 +56,24 @@ public class EC2Service {
         } catch (Ec2Exception e) {
             System.err.println(e.awsErrorDetails().errorCode());
             throw new RuntimeException("Failed to describe EC2 instances", e);
+        }
+    }
+    
+    public void describeEbsVolumes(String volumeId){
+        DescribeVolumesRequest describeVolumesRequest = DescribeVolumesRequest.builder()
+                .volumeIds(volumeId)
+                .build();
+        DescribeVolumesResponse volumesResponse = ec2Client.describeVolumes(describeVolumesRequest);
+
+
+        for (Volume volume : volumesResponse.volumes()) {
+            System.out.println("volume.toString() = " + volume.toString());
+            System.out.printf(
+                    "Found volume with id %s, state %s, and size %d GB%n",
+                    volume.volumeId(),
+                    volume.state(),
+                    volume.size()
+            );
         }
     }
 }

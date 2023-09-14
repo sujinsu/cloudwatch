@@ -29,6 +29,7 @@ public class RdsService {
         List<DBInstance> instanceList = new ArrayList<>();
         try {
             DescribeDbInstancesResponse response = rdsClient.describeDBInstances();
+
             System.out.println("response.toString() = " + response.toString());
             instanceList = response.dbInstances();
 
