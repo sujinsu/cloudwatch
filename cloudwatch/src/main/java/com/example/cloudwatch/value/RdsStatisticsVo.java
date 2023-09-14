@@ -16,9 +16,6 @@ public class RdsStatisticsVo {
 
     private String dbName;
 
-    private String namespace;
-
-    private String metricName;
     private String  statisticsType;
 
     private double statisticsValue;

@@ -10,15 +10,15 @@ import lombok.Setter;
 public class EC2StatisticsVo {
 
     private String instanceId;
-    private String instanceType;
-    private String tagName;
-    private String namespace;
 
-    private String metricName;
-    private String timestamp;
+    private String instanceType;
+
+    private String tagName;
+
     private String  statisticsType;
 
     private double statisticsValue;
+
     private String unit;
 
 }
