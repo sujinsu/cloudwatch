@@ -59,7 +59,10 @@ public class CloudWatchService {
 
     public CloudWatchService(AwsCredentialsProvider credentialsProvider) {
 
-        this.cloudWatchClient = CloudWatchClient.builder().region(Region.AP_NORTHEAST_2).credentialsProvider(credentialsProvider).build();
+        this.cloudWatchClient = CloudWatchClient.builder()
+                .region(Region.AP_NORTHEAST_2)
+                .credentialsProvider(credentialsProvider)
+                .build();
 
 
     }
@@ -101,20 +104,20 @@ public class CloudWatchService {
         return new MetricDataResponse(response.metricDataResults());
     }
 
-    public List<EC2StatisticsVo> getEC2MetricStatistics(Instant startTime, Instant endTime, String namespace, String metricName) {
+    public List<EC2StatisticsVo> getEC2MetricStatistics(Instant startTime, Instant endTime, String metricName,MetricStatistic statisticsType) {
 
 
         List<Instance> instances = ec2Service.describeEC2Instances();
         List<EC2StatisticsVo> result =  new ArrayList<>();
 
-//        String namespace = "AWS/EC2";
+        String namespace = "AWS/EC2";
 //        String metricName = "CPUUtilization"; // "StatusCheckFailed_System"
-        Collection<Statistic> statisticType;
-        if(Objects.equals(metricName, "StatusCheckFailed_System")){
-            statisticType = MetricStatistic.SAMPLE_COUNT.getValue();
-        }else{
-            statisticType = MetricStatistic.MAXIMUM.getValue();
-        }
+        Collection<Statistic> statisticType = statisticsType.getValue();
+//        if(Objects.equals(metricName, "StatusCheckFailed_System")){
+//            statisticType = MetricStatistic.SAMPLE_COUNT.getValue();
+//        }else{
+//            statisticType = MetricStatistic.MAXIMUM.getValue();
+//        }
 
 
 
@@ -126,7 +129,6 @@ public class CloudWatchService {
 ////                    System.out.println("blockDevice.toString() = " + )
 //            );
 
-
             
             Tag tagName = instance.tags().stream()
                     .filter(o -> o.key().equals("Name"))
@@ -137,8 +139,6 @@ public class CloudWatchService {
                     .name("InstanceId")
                     .value(instance.instanceId())
                     .build();
-
-
 
             GetMetricStatisticsRequest request = GetMetricStatisticsRequest.builder()
                     .namespace(namespace)
@@ -157,17 +157,28 @@ public class CloudWatchService {
                     EC2StatisticsVo vo = new EC2StatisticsVo();
 //                    System.out.println("datapoint sampleCount= " + datapoint.sampleCount());
                     vo.setInstanceId(instance.instanceId()); // Setting the instance ID here.
-                    vo.setTimestamp(datapoint.timestamp().toString());
                     vo.setTagName(tagName.value());
-                    vo.setMetricName(metricName);
-                    vo.setNamespace(namespace);
                     vo.setInstanceType(String.valueOf(instance.instanceType()));
                     vo.setUnit(datapoint.unit().toString());
                     vo.setStatisticsType(statisticType.toString());
-                    if(statisticType.equals(MetricStatistic.SAMPLE_COUNT.getValue())){
-                        vo.setStatisticsValue(datapoint.sampleCount());
-                    }else{
-                        vo.setStatisticsValue(datapoint.maximum());
+                    switch (statisticsType) {
+                        case AVERAGE:
+                            vo.setStatisticsValue(datapoint.average());
+                            break;
+                        case SUM:
+                            vo.setStatisticsValue(datapoint.sum());
+                            break;
+                        case MINIMUM:
+                            vo.setStatisticsValue(datapoint.minimum());
+                            break;
+                        case MAXIMUM:
+                            vo.setStatisticsValue(datapoint.maximum());
+                            break;
+                        case SAMPLE_COUNT:
+                            vo.setStatisticsValue(datapoint.sampleCount());
+                            break;
+                        default:
+                            throw new IllegalArgumentException("Invalid statisticsType: " + statisticsType);
                     }
 
                     result.add(vo);
@@ -176,13 +187,13 @@ public class CloudWatchService {
         }
         return result;
     }
-    public List<RdsStatisticsVo> getRdsMetricStatistics(Instant startTime, Instant endTime, String namespace, String metricName) {
+    public List<RdsStatisticsVo> getRdsMetricStatistics(Instant startTime, Instant endTime, String metricName,MetricStatistic statisticsType) {
         List<DBInstance> instances = rdsService.describeRdsInstances();
         List<RdsStatisticsVo> result = new ArrayList<>();
 
-//        String namespace = "AWS/RDS";
+        String namespace = "AWS/RDS";
 //        String metricName = "CPUUtilization";
-        Collection<Statistic> statisticType = MetricStatistic.AVERAGE.getValue();
+        Collection<Statistic> statisticType = statisticsType.getValue();
 
         for (DBInstance instance : instances) {
 
@@ -207,13 +218,29 @@ public class CloudWatchService {
             if (!response.datapoints().isEmpty()) {
                 for (Datapoint datapoint : response.datapoints()) {
                     RdsStatisticsVo vo = new RdsStatisticsVo();
-                    vo.setMetricName(metricName);
-                    vo.setNamespace(namespace);
                     vo.setEngine(instance.engine());
                     vo.setEndpoint(instance.endpoint());
                     vo.setDbName(instance.dbName());
                     vo.setStatisticsType(statisticType.toString());
-                    vo.setStatisticsValue(datapoint.maximum());
+                    switch (statisticsType) {
+                        case AVERAGE:
+                            vo.setStatisticsValue(datapoint.average());
+                            break;
+                        case SUM:
+                            vo.setStatisticsValue(datapoint.sum());
+                            break;
+                        case MINIMUM:
+                            vo.setStatisticsValue(datapoint.minimum());
+                            break;
+                        case MAXIMUM:
+                            vo.setStatisticsValue(datapoint.maximum());
+                            break;
+                        case SAMPLE_COUNT:
+                            vo.setStatisticsValue(datapoint.sampleCount());
+                            break;
+                        default:
+                            throw new IllegalArgumentException("Invalid statisticsType: " + statisticsType);
+                    }
                     result.add(vo);
                 }
             }
