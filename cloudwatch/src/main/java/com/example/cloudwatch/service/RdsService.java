@@ -5,6 +5,7 @@ import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.rds.RdsClient;
 import software.amazon.awssdk.services.rds.model.DBInstance;
+import software.amazon.awssdk.services.rds.model.DescribeDbInstancesRequest;
 import software.amazon.awssdk.services.rds.model.DescribeDbInstancesResponse;
 import software.amazon.awssdk.services.rds.model.RdsException;
 
@@ -25,7 +26,7 @@ public class RdsService {
 
     }
 
-    public List<DBInstance> describeRdsInstances() {
+    public List<DBInstance> describeRdsInstancesList() {
         List<DBInstance> instanceList = new ArrayList<>();
         try {
             DescribeDbInstancesResponse response = rdsClient.describeDBInstances();
@@ -38,5 +39,26 @@ public class RdsService {
         }
 
         return instanceList;
+    }
+
+    public DBInstance describeRdsInstances(String dbInstanceIdentifier) {
+
+        DBInstance instance = null;
+        try {
+
+            DescribeDbInstancesRequest request = DescribeDbInstancesRequest.builder()
+                    .dbInstanceIdentifier(dbInstanceIdentifier)
+                    .build();
+
+            DescribeDbInstancesResponse response = rdsClient.describeDBInstances(request);
+
+            System.out.println("response.toString() = " + response.toString());
+            instance = response.dbInstances().get(0);
+
+        } catch (RdsException e) {
+            System.out.println(e.getLocalizedMessage());
+        }
+
+        return instance;
     }
 }
