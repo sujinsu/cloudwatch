@@ -34,17 +34,16 @@ public class EC2Service {
         String nextToken = null;
         try {
             do {
-                DescribeInstancesRequest request = DescribeInstancesRequest.builder().maxResults(6).nextToken(nextToken).build();
+                DescribeInstancesRequest request = DescribeInstancesRequest.builder()
+                        .maxResults(6)
+                        .nextToken(nextToken)
+                        .build();
+
                 DescribeInstancesResponse response = ec2Client.describeInstances(request);
                 for (Reservation reservation : response.reservations()) {
                     for (Instance instance : reservation.instances()) {
                         instances.add(instance);
-//                        instance.instanceId();
-//                        Tag tagName = instance.tags().stream()
-//                            .filter(o -> o.key().equals("Name"))
-//                            .findFirst()
-//                            .orElse(Tag.builder().key("Name").value("name not found").build());
-//
+
 //                        System.out.println("Found instance with ID: " + instance.instanceId()
 //                            + ", NAME: " + tagName.value()
 //                            + ", TYPE: " + instance.instanceType());
@@ -57,6 +56,16 @@ public class EC2Service {
             System.err.println(e.awsErrorDetails().errorCode());
             throw new RuntimeException("Failed to describe EC2 instances", e);
         }
+    }
+
+    public Instance getEC2Instance(String instanceId){
+        DescribeInstancesRequest request = DescribeInstancesRequest.builder()
+                .instanceIds(instanceId)
+                .build();
+
+        DescribeInstancesResponse response = ec2Client.describeInstances(request);
+
+        return response.reservations().get(0).instances().get(0);
     }
     
     public void describeEbsVolumes(String volumeId){
