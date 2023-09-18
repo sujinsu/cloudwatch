@@ -109,13 +109,13 @@ public class CloudWatchService {
         return new MetricDataResponse(response.metricDataResults());
     }
 
-    public List<EC2StatisticsVo> getEC2ListMetricStatistics(Instant startTime, Instant endTime, String metricName,MetricStatistic statisticsType) {
+    public List<EC2StatisticsVo> getEC2ListMetricStatistics(Instant startTime, Instant endTime, String namespace, String metricName,MetricStatistic statisticsType) {
 
 
         List<Instance> instances = ec2Service.describeEC2Instances();
         List<EC2StatisticsVo> result =  new ArrayList<>();
 
-        String namespace = "AWS/EC2";
+//        String namespace = "AWS/EC2";
 //        String metricName = "CPUUtilization"; // "StatusCheckFailed_System"
         Collection<Statistic> statisticType = statisticsType.getValue();
 
@@ -175,7 +175,7 @@ public class CloudWatchService {
      * @param statisticsType
      * @return
      */
-    public DetailedEC2StatisticsVo getEC2MetricStatistics(Instant startTime, Instant endTime, String instanceId, MetricStatistic statisticsType){
+    public DetailedEC2StatisticsVo getEC2MetricStatistics(Instant startTime, Instant endTime, String instanceId,String namespace, MetricStatistic statisticsType){
 
         Instance instance = ec2Service.getEC2Instance(instanceId);
         List<String> metricNames = Arrays.asList("CPUUtilization", "mem_used_percent", "disk_used_percent");
@@ -185,7 +185,7 @@ public class CloudWatchService {
 
         for (String metricName : metricNames) {
             GetMetricStatisticsRequest request = GetMetricStatisticsRequest.builder()
-                    .namespace("AWS/EC2")
+                    .namespace(namespace)
                     .metricName(metricName)
                     .dimensions(Dimension.builder().name("InstanceId").value(instanceId).build())
                     .startTime(startTime) // 예: 1시간 전부터 현재까지

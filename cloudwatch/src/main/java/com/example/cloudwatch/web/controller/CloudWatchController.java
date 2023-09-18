@@ -45,11 +45,12 @@ public class CloudWatchController {
 //            @RequestParam Instant startTime,
 //            @RequestParam Instant endTime
             @ApiParam(example = "CPUUtilization") @RequestParam String metricName,
+            @ApiParam(example = "AWS/EC2") @RequestParam String namespace,
             @ApiParam(value = "통계 내고자 하는 타입 : MAXIMUM(최대), MINIMUM(최소), AVERAGE(평균), SAMPLE_COUNT, SUM ", example = "AVERAGE") @RequestParam MetricStatistic statisticsType
     ) {
         Instant endTime = Instant.now(); // 현재 시간
         Instant startTime = endTime.minus(5, ChronoUnit.MINUTES); // 7일 전
-        return new ResponseEntity<>(cloudWatchService.getEC2ListMetricStatistics(startTime, endTime, metricName, statisticsType), HttpStatus.OK);
+        return new ResponseEntity<>(cloudWatchService.getEC2ListMetricStatistics(startTime, endTime, namespace, metricName, statisticsType), HttpStatus.OK);
     }
 
     @ApiOperation(value = "기간동안 특정 EC2 인스턴스 통계 조회", notes = "CloudWatch 메트릭을 조회하기 위한 IAM 권한이 필요")
@@ -57,13 +58,13 @@ public class CloudWatchController {
     public ResponseEntity<DetailedEC2StatisticsVo> getEC2MetricStatistics(
 //            @RequestParam Instant startTime,
 //            @RequestParam Instant endTime
-            @ApiParam(example = "CPUUtilization") @RequestParam String metricName,
+            @ApiParam(example = "CPUUtilization") @RequestParam String namespace,
             @ApiParam(value = "통계 내고자 하는 타입 : MAXIMUM(최대), MINIMUM(최소), AVERAGE(평균), SAMPLE_COUNT, SUM ", example = "AVERAGE") @RequestParam MetricStatistic statisticsType,
             @ApiParam(example = "i-02169d575ab129ec0") @RequestParam String instanceId
     ) {
         Instant endTime = Instant.now(); // 현재 시간
         Instant startTime = endTime.minus(5, ChronoUnit.MINUTES); // 7일 전
-        return new ResponseEntity<>(cloudWatchService.getEC2MetricStatistics(startTime, endTime, instanceId, statisticsType), HttpStatus.OK);
+        return new ResponseEntity<>(cloudWatchService.getEC2MetricStatistics(startTime, endTime, instanceId, namespace, statisticsType), HttpStatus.OK);
     }
 
     @ApiOperation(value = "기간동안 RDS 인스턴스 목록 통계 조회", notes = "CloudWatch 메트릭을 조회하기 위한 IAM 권한이 필요")
