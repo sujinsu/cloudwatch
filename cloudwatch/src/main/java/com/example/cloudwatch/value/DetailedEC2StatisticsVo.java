@@ -14,6 +14,8 @@ public class DetailedEC2StatisticsVo {
 
     private String instanceType;
 
+    private int coreCount;
+
     private String tagName;
 
     private double mem_used_percent;
@@ -23,7 +25,6 @@ public class DetailedEC2StatisticsVo {
     private double CPUUtilization;
     private String  statisticsType;
 
-    private double statisticsValue;
 
     private String unit;
 }

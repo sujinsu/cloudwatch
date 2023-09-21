@@ -8,7 +8,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Objects;
 
 import com.example.cloudwatch.value.DetailedEC2StatisticsVo;
 import com.example.cloudwatch.value.DetailedRdsStatisticsVo;
@@ -156,6 +155,7 @@ public class CloudWatchService {
                     vo.setInstanceId(instance.instanceId()); // Setting the instance ID here.
                     vo.setTagName(tagName.value());
                     vo.setInstanceType(String.valueOf(instance.instanceType()));
+                    vo.setCoreCount(instance.cpuOptions().coreCount());
                     vo.setUnit(datapoint.unit().toString());
                     vo.setStatisticsType(statisticType.toString());
                     double data = getStatisticsType(statisticsType, datapoint);
@@ -179,9 +179,17 @@ public class CloudWatchService {
 
         Instance instance = ec2Service.getEC2Instance(instanceId);
         List<String> metricNames = Arrays.asList("CPUUtilization", "mem_used_percent", "disk_used_percent");
+
         DetailedEC2StatisticsVo vo = new DetailedEC2StatisticsVo();
+        Tag tagName = instance.tags().stream()
+                .filter(o -> o.key().equals("Name"))
+                .findFirst()
+                .orElse(Tag.builder().key("Name").value("name not found").build());
+
         vo.setInstanceId(instance.instanceId()); // Setting the instance ID here.
         vo.setInstanceType(String.valueOf(instance.instanceType()));
+        vo.setCoreCount(instance.cpuOptions().coreCount());
+        vo.setTagName(tagName.value());
 
         for (String metricName : metricNames) {
             GetMetricStatisticsRequest request = GetMetricStatisticsRequest.builder()
@@ -199,6 +207,9 @@ public class CloudWatchService {
             GetMetricStatisticsResponse response = cloudWatchClient.getMetricStatistics(request);
             if (!response.datapoints().isEmpty()) {
                 Datapoint datapoint = response.datapoints().get(0); // Assuming you want the first datapoint, adjust if needed
+                vo.setUnit(datapoint.unit().toString());
+                vo.setStatisticsType(String.valueOf(statisticsType));
+
                 double data = getStatisticsType(statisticsType,  datapoint);
                 switch (metricName) {
                     case "CPUUtilization":

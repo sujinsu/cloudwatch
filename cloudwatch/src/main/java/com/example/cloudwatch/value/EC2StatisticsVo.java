@@ -13,6 +13,8 @@ public class EC2StatisticsVo {
 
     private String instanceType;
 
+    private int coreCount;
+
     private String tagName;
 
     private String  statisticsType;
