@@ -58,9 +58,9 @@ public class CloudWatchController {
     public ResponseEntity<DetailedEC2StatisticsVo> getEC2MetricStatistics(
 //            @RequestParam Instant startTime,
 //            @RequestParam Instant endTime
-            @ApiParam(example = "CPUUtilization") @RequestParam String namespace,
+            @ApiParam(example = "CWAgent") @RequestParam String namespace,
             @ApiParam(value = "통계 내고자 하는 타입 : MAXIMUM(최대), MINIMUM(최소), AVERAGE(평균), SAMPLE_COUNT, SUM ", example = "AVERAGE") @RequestParam MetricStatistic statisticsType,
-            @ApiParam(example = "i-02169d575ab129ec0") @RequestParam String instanceId
+            @ApiParam(example = "i-020eb3c09f079b610") @RequestParam String instanceId
     ) {
         Instant endTime = Instant.now(); // 현재 시간
         Instant startTime = endTime.minus(5, ChronoUnit.MINUTES); // 7일 전
