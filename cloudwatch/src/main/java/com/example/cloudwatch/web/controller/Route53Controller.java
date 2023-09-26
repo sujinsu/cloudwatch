@@ -3,6 +3,7 @@ package com.example.cloudwatch.web.controller;
 import com.example.cloudwatch.service.RdsService;
 import com.example.cloudwatch.service.Route53Service;
 import com.example.cloudwatch.value.DetailedRdsVo;
+import com.example.cloudwatch.value.ResourceRecordVo;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,13 @@ public class Route53Controller {
     ) {
 
         return new ResponseEntity<>(route53Service.listDomains(), HttpStatus.OK);
+    }
+
+    @ApiOperation(value = "", notes = "")
+    @GetMapping("/listResourceRecord")
+    public ResponseEntity<List<ResourceRecordVo>>  listResourceRecord(
+    ) {
+        return new ResponseEntity<>(route53Service.listResourceRecord(), HttpStatus.OK);
     }
 
 }
